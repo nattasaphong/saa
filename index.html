@@ -2,41 +2,144 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>ปฏิทินเลือกปี/เดือน</title>
+<title>ปฏิทินยืมเครื่อง</title>
 
 <style>
-body {
-  font-family: sans-serif;
-  margin: 20px;
+* {
+  box-sizing: border-box;
 }
+
+body {
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  margin: 20px;
+  background: #f7f9fc;
+  color: #333;
+}
+
 .header {
   display: flex;
   gap: 10px;
   align-items: center;
   margin-bottom: 15px;
 }
+
 select {
-  padding: 6px;
-  font-size: 16px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
 }
+
+.container {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr;
+  gap: 20px;
+}
+
+/* ===== CALENDAR ===== */
 table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
 }
-th, td {
-  border: 1px solid #ddd;
-  height: 90px;
-  vertical-align: top;
-  padding: 5px;
-}
+
 th {
-  background: #f2f2f2;
+  background: #4f7cff;
+  color: white;
+  padding: 10px 0;
+  font-weight: normal;
 }
-.date {
+
+td {
+  border: 1px solid #e5e7eb;
+  height: 110px;
+  vertical-align: top;
+  padding: 6px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+}
+
+td:hover {
+  background: #f1f5ff;
+}
+
+.day {
+  position: absolute;
+  top: 6px;
+  right: 8px;
   font-weight: bold;
+  font-size: 14px;
 }
+
+/* ชื่อเกษตรกรในช่องวัน */
+.farmer {
+  margin-top: 28px;
+  font-size: 13px;
+  padding: 4px 6px;
+  background: #e8f0ff;
+  border-radius: 6px;
+  color: #1e40af;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* วันนี้ */
 .today {
-  background: #ffe6e6;
+  background: #fff1f2;
+}
+
+/* วันที่เลือก */
+.selected {
+  outline: 2px solid #4f7cff;
+  background: #eef3ff;
+}
+
+/* ===== PANEL ===== */
+.panel {
+  background: white;
+  border-radius: 12px;
+  padding: 15px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.panel h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #4f7cff;
+}
+
+.panel label {
+  display: block;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.panel input {
+  width: 100%;
+  padding: 7px 8px;
+  margin-top: 4px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.panel button {
+  margin-top: 15px;
+  width: 100%;
+  padding: 8px;
+  background: #4f7cff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.panel button:hover {
+  background: #3b66e0;
 }
 </style>
 </head>
@@ -51,20 +154,44 @@ th {
   <select id="monthSelect"></select>
 </div>
 
-<table>
-<thead>
-<tr>
-  <th>อา.</th>
-  <th>จ.</th>
-  <th>อ.</th>
-  <th>พ.</th>
-  <th>พฤ.</th>
-  <th>ศ.</th>
-  <th>ส.</th>
-</tr>
-</thead>
-<tbody id="calendarBody"></tbody>
-</table>
+<div class="container">
+
+  <!-- CALENDAR -->
+  <table>
+    <thead>
+      <tr>
+        <th>อา.</th>
+        <th>จ.</th>
+        <th>อ.</th>
+        <th>พ.</th>
+        <th>พฤ.</th>
+        <th>ศ.</th>
+        <th>ส.</th>
+      </tr>
+    </thead>
+    <tbody id="calendarBody"></tbody>
+  </table>
+
+  <!-- DETAIL PANEL -->
+  <div class="panel">
+    <h3 id="panelDate">เลือกวันที่</h3>
+
+    <label>ชื่อเกษตรกร</label>
+    <input type="text" id="farmerName">
+
+    <label>วันเวลาในการยืมเครื่อง</label>
+    <input type="datetime-local" id="borrowDate">
+
+    <label>วันเพาะปลูก</label>
+    <input type="date" id="plantDate">
+
+    <label>วันเก็บเกี่ยว</label>
+    <input type="date" id="harvestDate">
+
+    <button onclick="saveData()">บันทึก / แก้ไข</button>
+  </div>
+
+</div>
 
 <script>
 const monthNames = [
@@ -78,68 +205,117 @@ const yearSelect = document.getElementById("yearSelect");
 const monthSelect = document.getElementById("monthSelect");
 const calendarBody = document.getElementById("calendarBody");
 
-// เติมปี (พ.ศ.)
+let selectedDateKey = "";
+
+/* ปี */
 for (let y = today.getFullYear() - 2; y <= today.getFullYear() + 2; y++) {
-  const option = document.createElement("option");
-  option.value = y;
-  option.text = y + 543;
-  if (y === today.getFullYear()) option.selected = true;
-  yearSelect.appendChild(option);
+  const o = document.createElement("option");
+  o.value = y;
+  o.text = y + 543;
+  if (y === today.getFullYear()) o.selected = true;
+  yearSelect.appendChild(o);
 }
 
-// เติมเดือน
+/* เดือน */
 monthNames.forEach((m, i) => {
-  const option = document.createElement("option");
-  option.value = i;
-  option.text = m;
-  if (i === today.getMonth()) option.selected = true;
-  monthSelect.appendChild(option);
+  const o = document.createElement("option");
+  o.value = i;
+  o.text = m;
+  if (i === today.getMonth()) o.selected = true;
+  monthSelect.appendChild(o);
 });
 
-yearSelect.addEventListener("change", renderCalendar);
-monthSelect.addEventListener("change", renderCalendar);
+yearSelect.onchange = renderCalendar;
+monthSelect.onchange = renderCalendar;
 
 renderCalendar();
 
 function renderCalendar() {
-  const year = parseInt(yearSelect.value);
-  const month = parseInt(monthSelect.value);
+  const year = +yearSelect.value;
+  const month = +monthSelect.value;
 
   calendarBody.innerHTML = "";
 
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  let date = 1;
+  let d = 1;
 
   for (let i = 0; i < 6; i++) {
-    const row = document.createElement("tr");
+    const tr = document.createElement("tr");
 
     for (let j = 0; j < 7; j++) {
-      const cell = document.createElement("td");
+      const td = document.createElement("td");
 
-      if (i === 0 && j < firstDay) {
-        cell.innerHTML = "";
-      } else if (date > daysInMonth) {
-        cell.innerHTML = "";
+      if ((i === 0 && j < firstDay) || d > daysInMonth) {
+        td.innerHTML = "";
       } else {
-        cell.innerHTML = `<div class="date">${date}</div>`;
+        const key = `${year}-${month + 1}-${d}`;
+        const saved = JSON.parse(localStorage.getItem(key));
 
-        if (
-          date === today.getDate() &&
-          month === today.getMonth() &&
-          year === today.getFullYear()
-        ) {
-          cell.classList.add("today");
+        td.innerHTML = `<span class="day">${d}</span>`;
+
+        if (saved?.name) {
+          td.innerHTML += `<div class="farmer">${saved.name}</div>`;
         }
 
-        date++;
-      }
+        td.dataset.key = key;
+        td.dataset.y = year;
+        td.dataset.m = month;
+        td.dataset.d = d;
 
-      row.appendChild(cell);
+        if (
+          d === today.getDate() &&
+          month === today.getMonth() &&
+          year === today.getFullYear()
+        ) td.classList.add("today");
+
+        td.onclick = selectDate;
+        d++;
+      }
+      tr.appendChild(td);
     }
-    calendarBody.appendChild(row);
+    calendarBody.appendChild(tr);
   }
+}
+
+function selectDate() {
+  document.querySelectorAll("td").forEach(td =>
+    td.classList.remove("selected")
+  );
+  this.classList.add("selected");
+
+  const y = this.dataset.y;
+  const m = this.dataset.m;
+  const d = this.dataset.d;
+
+  selectedDateKey = this.dataset.key;
+  panelDate.innerText = `วันที่ ${d}/${+m + 1}/${+y + 543}`;
+
+  const saved = JSON.parse(localStorage.getItem(selectedDateKey));
+
+  farmerName.value = saved?.name || "";
+  borrowDate.value = saved?.borrow || "";
+  plantDate.value = saved?.plant || "";
+  harvestDate.value = saved?.harvest || "";
+}
+
+function saveData() {
+  if (!selectedDateKey) {
+    alert("กรุณาเลือกวันที่ก่อน");
+    return;
+  }
+
+  const data = {
+    name: farmerName.value,
+    borrow: borrowDate.value,
+    plant: plantDate.value,
+    harvest: harvestDate.value
+  };
+
+  localStorage.setItem(selectedDateKey, JSON.stringify(data));
+  renderCalendar();
+  alert("บันทึกข้อมูลเรียบร้อย");
 }
 </script>
 
