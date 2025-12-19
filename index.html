@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>ปฏิทินกำลังการผลิต</title>
+
+<style>
+body { font-family: sans-serif; }
+table { width:100%; border-collapse: collapse; }
+th, td {
+  border:1px solid #ddd;
+  height:120px;
+  vertical-align: top;
+  padding:5px;
+}
+th { background:#f2f2f2; }
+.date { font-weight:bold; }
+.event { font-size:13px; margin-top:4px; }
+.today { background:#ffe6e6; }
+</style>
+</head>
+
+<body>
+
+<h2 id="monthTitle"></h2>
+
+<table>
+<thead>
+<tr>
+  <th>อา.</th>
+  <th>จ.</th>
+  <th>อ.</th>
+  <th>พ.</th>
+  <th>พฤ.</th>
+  <th>ศ.</th>
+  <th>ส.</th>
+</tr>
+</thead>
+<tbody id="calendarBody"></tbody>
+</table>
+
+<script>
+const today = new Date();
+const year = today.getFullYear();
+const month = today.getMonth();
+
+document.getElementById("monthTitle").innerText =
+  today.toLocaleDateString("th-TH", { month:"long", year:"numeric" });
+
+google.script.run.withSuccessHandler(renderCalendar)
+  .getCalendarData();
+
+function renderCalendar(events) {
+  const tbody = document.getElementById("calendarBody");
+  tbody.innerHTML = ""; // ล้างก่อน
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  let date = 1;
+
+  for (let i = 0; i < 6; i++) {
+    const row = document.createElement("tr");
+
+    for (let j = 0; j < 7; j++) {
+      const cell = document.createElement("td");
+
+      if (i === 0 && j < firstDay) {
+        cell.innerHTML = "";
+      } else if (date > daysInMonth) {
+        cell.innerHTML = "";
+      } else {
+        const fullDate =
+          `${year}-${String(month+1).padStart(2,"0")}-${String(date).padStart(2,"0")}`;
+
+        cell.innerHTML = `<div class="date">${date}</div>`;
+
+        if (Array.isArray(events)) {
+          events.forEach(e => {
+            if (e.date === fullDate) {
+              cell.innerHTML += `<div class="event">${e.title}</div>`;
+            }
+          });
+        }
+
+        if (
+          date === today.getDate() &&
+          month === today.getMonth()
+        ) {
+          cell.classList.add("today");
+        }
+
+        date++;
+      }
+
+      row.appendChild(cell);
+    }
+    tbody.appendChild(row);
+  }
+}
+</script>
+
+</body>
+</html>
