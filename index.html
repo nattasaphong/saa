@@ -2,27 +2,54 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>ปฏิทินกำลังการผลิต</title>
+<title>ปฏิทินเลือกปี/เดือน</title>
 
 <style>
-body { font-family: sans-serif; }
-table { width:100%; border-collapse: collapse; }
-th, td {
-  border:1px solid #ddd;
-  height:120px;
-  vertical-align: top;
-  padding:5px;
+body {
+  font-family: sans-serif;
+  margin: 20px;
 }
-th { background:#f2f2f2; }
-.date { font-weight:bold; }
-.event { font-size:13px; margin-top:4px; }
-.today { background:#ffe6e6; }
+.header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 15px;
+}
+select {
+  padding: 6px;
+  font-size: 16px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th, td {
+  border: 1px solid #ddd;
+  height: 90px;
+  vertical-align: top;
+  padding: 5px;
+}
+th {
+  background: #f2f2f2;
+}
+.date {
+  font-weight: bold;
+}
+.today {
+  background: #ffe6e6;
+}
 </style>
 </head>
 
 <body>
 
-<h2 id="monthTitle"></h2>
+<div class="header">
+  <label>ปี:</label>
+  <select id="yearSelect"></select>
+
+  <label>เดือน:</label>
+  <select id="monthSelect"></select>
+</div>
 
 <table>
 <thead>
@@ -40,19 +67,45 @@ th { background:#f2f2f2; }
 </table>
 
 <script>
+const monthNames = [
+  "มกราคม","กุมภาพันธ์","มีนาคม","เมษายน",
+  "พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม",
+  "กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"
+];
+
 const today = new Date();
-const year = today.getFullYear();
-const month = today.getMonth();
+const yearSelect = document.getElementById("yearSelect");
+const monthSelect = document.getElementById("monthSelect");
+const calendarBody = document.getElementById("calendarBody");
 
-document.getElementById("monthTitle").innerText =
-  today.toLocaleDateString("th-TH", { month:"long", year:"numeric" });
+// เติมปี (พ.ศ.)
+for (let y = today.getFullYear() - 2; y <= today.getFullYear() + 2; y++) {
+  const option = document.createElement("option");
+  option.value = y;
+  option.text = y + 543;
+  if (y === today.getFullYear()) option.selected = true;
+  yearSelect.appendChild(option);
+}
 
-google.script.run.withSuccessHandler(renderCalendar)
-  .getCalendarData();
+// เติมเดือน
+monthNames.forEach((m, i) => {
+  const option = document.createElement("option");
+  option.value = i;
+  option.text = m;
+  if (i === today.getMonth()) option.selected = true;
+  monthSelect.appendChild(option);
+});
 
-function renderCalendar(events) {
-  const tbody = document.getElementById("calendarBody");
-  tbody.innerHTML = ""; // ล้างก่อน
+yearSelect.addEventListener("change", renderCalendar);
+monthSelect.addEventListener("change", renderCalendar);
+
+renderCalendar();
+
+function renderCalendar() {
+  const year = parseInt(yearSelect.value);
+  const month = parseInt(monthSelect.value);
+
+  calendarBody.innerHTML = "";
 
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -70,22 +123,12 @@ function renderCalendar(events) {
       } else if (date > daysInMonth) {
         cell.innerHTML = "";
       } else {
-        const fullDate =
-          `${year}-${String(month+1).padStart(2,"0")}-${String(date).padStart(2,"0")}`;
-
         cell.innerHTML = `<div class="date">${date}</div>`;
-
-        if (Array.isArray(events)) {
-          events.forEach(e => {
-            if (e.date === fullDate) {
-              cell.innerHTML += `<div class="event">${e.title}</div>`;
-            }
-          });
-        }
 
         if (
           date === today.getDate() &&
-          month === today.getMonth()
+          month === today.getMonth() &&
+          year === today.getFullYear()
         ) {
           cell.classList.add("today");
         }
@@ -95,7 +138,7 @@ function renderCalendar(events) {
 
       row.appendChild(cell);
     }
-    tbody.appendChild(row);
+    calendarBody.appendChild(row);
   }
 }
 </script>
